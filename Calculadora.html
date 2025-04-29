@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Comparador de Taxas de Cartão</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h1, h3 {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .compare-button {
+      background-color: #2e8b57;
+      color: white;
+    }
+
+    .export-button {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #e7f4e4;
+      border: 1px solid #cce5cc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+
+      .container {
+        padding: 15px;
+      }
+
+      h1, h3 {
+        font-size: 1.2em;
+      }
+
+      input, button {
+        font-size: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="area-pdf">
+    <h1>Comparador de Taxas de Cartão</h1>
+
+    <label>Faturamento Mensal (R$):</label>
+    <input type="number" id="faturamento" placeholder="Ex: 10000">
+
+    <h3>Suas Taxas</h3>
+    <label>Taxa Débito (%):</label>
+    <input type="number" id="taxaDebito1" step="0.01">
+
+    <label>Taxa Crédito (%):</label>
+    <input type="number" id="taxaCredito1" step="0.01">
+
+    <h3>Taxas do Concorrente</h3>
+    <label>Taxa Débito (%):</label>
+    <input type="number" id="taxaDebito2" step="0.01">
+
+    <label>Taxa Crédito (%):</label>
+    <input type="number" id="taxaCredito2" step="0.01">
+
+    <h3>Proporção de Vendas</h3>
+    <label>Share Débito (%):</label>
+    <input type="number" id="shareDebito" placeholder="Ex: 40">
+
+    <label>Share Crédito (%):</label>
+    <input type="number" id="shareCredito" placeholder="Ex: 60">
+
+    <button class="compare-button" onclick="comparar()">Comparar</button>
+    <button class="export-button" onclick="exportarPDF()">Exportar para PDF</button>
+
+    <div class="result" id="resultado"></div>
+  </div>
+
+  <script>
+    function comparar() {
+      const faturamento = parseFloat(document.getElementById("faturamento").value);
+      const taxaDebito1 = parseFloat(document.getElementById("taxaDebito1").value) / 100;
+      const taxaCredito1 = parseFloat(document.getElementById("taxaCredito1").value) / 100;
+      const taxaDebito2 = parseFloat(document.getElementById("taxaDebito2").value) / 100;
+      const taxaCredito2 = parseFloat(document.getElementById("taxaCredito2").value) / 100;
+      const shareDebito = parseFloat(document.getElementById("shareDebito").value) / 100;
+      const shareCredito = parseFloat(document.getElementById("shareCredito").value) / 100;
+
+      if (isNaN(faturamento) || isNaN(taxaDebito1) || isNaN(taxaCredito1) ||
+          isNaN(taxaDebito2) || isNaN(taxaCredito2) || isNaN(shareDebito) || isNaN(shareCredito)) {
+        alert("Preencha todos os campos corretamente.");
+        return;
+      }
+
+      if ((shareDebito + shareCredito) !== 1) {
+        alert("A soma de Share Débito e Share Crédito deve ser 100%.");
+        return;
+      }
+
+      const valorDebito = faturamento * shareDebito;
+      const valorCredito = faturamento * shareCredito;
+
+      const custo1 = (valorDebito * taxaDebito1) + (valorCredito * taxaCredito1);
+      const custo2 = (valorDebito * taxaDebito2) + (valorCredito * taxaCredito2);
+
+      const economiaMensal = Math.abs(custo1 - custo2);
+      const economiaAnual = economiaMensal * 12;
+
+      const resultado = document.getElementById("resultado");
+      resultado.innerHTML = `
+        <strong>Seu custo mensal atual:</strong> R$ ${custo1.toFixed(2)}<br>
+        <strong>Custo mensal com o concorrente:</strong> R$ ${custo2.toFixed(2)}<br>
+        <strong>Economia mensal:</strong> R$ ${economiaMensal.toFixed(2)}<br>
+        <strong>Economia anual:</strong> R$ ${economiaAnual.toFixed(2)}<br><br>
+        <strong>${custo2 < custo1 ? "A proposta do concorrente é mais vantajosa." : "Sua proposta atual é mais vantajosa."}</strong>
+      `;
+    }
+
+    function exportarPDF() {
+      const areaPDF = document.getElementById("area-pdf");
+      const opt = {
+        margin: 0.5,
+        filename: 'comparativo-taxas.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(areaPDF).save();
+    }
+  </script>
+</body>
+</html>
